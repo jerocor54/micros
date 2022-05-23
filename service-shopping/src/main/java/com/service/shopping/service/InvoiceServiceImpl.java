@@ -2,12 +2,18 @@ package com.service.shopping.service;
 
 import com.service.shopping.Repository.InvoiceItemsRepository;
 import com.service.shopping.Repository.InvoiceRepository;
+import com.service.shopping.client.CustomerClient;
+import com.service.shopping.client.ProductClient;
 import com.service.shopping.entity.Invoice;
+import com.service.shopping.entity.InvoiceItem;
+import com.service.shopping.model.Customer;
+import com.service.shopping.model.Product;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -19,6 +25,12 @@ public class InvoiceServiceImpl implements  InvoiceService{
     @Autowired
     private InvoiceItemsRepository invoiceItemsRepository;
 
+    @Autowired
+    CustomerClient customerClient;
+
+    @Autowired
+    ProductClient productClient;
+
     @Override
     public List<Invoice> getInvoices() {
         return this.invoiceRepository.findAll();
@@ -26,7 +38,20 @@ public class InvoiceServiceImpl implements  InvoiceService{
 
     @Override
     public Invoice getInvoice(Long id) {
-        return this.invoiceRepository.findById(id).orElse(null);
+        Invoice invoiceDB = this.invoiceRepository.findById(id).orElse(null);
+        if(invoiceDB != null){
+            Customer customer = customerClient.getCustomer(invoiceDB.getCustomerId()).getBody();
+            log.info("customer {}", customer);
+            invoiceDB.setCustomer(customer);
+            List<InvoiceItem> listItems = invoiceDB.getItems().stream().map(invoiceItem -> {
+                Product product = productClient.getProduct(invoiceItem.getProductId()).getBody();
+                log.info("product {}", product);
+                invoiceItem.setProduct(product);
+                return invoiceItem;
+            }).collect(Collectors.toList());
+            invoiceDB.setItems(listItems);
+        }
+        return invoiceDB;
     }
 
     @Override
@@ -36,7 +61,11 @@ public class InvoiceServiceImpl implements  InvoiceService{
             return invoiceDB;
         }
         invoice.setState("CREATED");
-        return this.invoiceRepository.save(invoice);
+        invoiceDB = this.invoiceRepository.save(invoice);
+        invoiceDB.getItems().forEach(invoiceItem -> {
+            productClient.updateStock(invoiceItem.getProductId(), invoiceItem.getQuantity() *  -1);
+        });
+        return invoiceDB;
     }
 
     @Override

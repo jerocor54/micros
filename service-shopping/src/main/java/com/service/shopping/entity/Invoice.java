@@ -1,6 +1,7 @@
 package com.service.shopping.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.service.shopping.model.Customer;
 import lombok.Data;
 
 import javax.persistence.*;
@@ -31,6 +32,9 @@ public class Invoice {
     private Date createdAt;
 
     private String state;
+
+    @Transient
+    private Customer customer;
 
     @Valid
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

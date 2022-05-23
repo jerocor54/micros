@@ -52,7 +52,7 @@ public class InvoiceController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, this.formatMessage(result));
         }
         Invoice invoiceDB = this.invoiceService.createInvoice(invoice);
-        return ResponseEntity.status(HttpStatus.CREATED).body(invoice);
+        return ResponseEntity.status(HttpStatus.CREATED).body(invoiceDB);
     }
 
     @PutMapping("/{id}")
